@@ -1,0 +1,322 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  password    String
+  phone       String?
+  role        String   @default("AGENT") // ADMIN, MANAGER, AGENT, WAREHOUSE, FINANCE
+  status      String   @default("ACTIVE") // ACTIVE, INACTIVE
+  branchId    String?
+  branch      Branch?  @relation(fields: [branchId], references: [id])
+  avatar      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orders      Order[]
+  visits      Visit[]
+  routes      Route[]
+  kpiRecords  KPIRecord[]
+  notifications Notification[]
+  favorites   Favorite[]
+  activityLogs ActivityLog[]
+}
+
+model Branch {
+  id          String   @id @default(cuid())
+  name        String
+  address     String?
+  phone       String?
+  manager     String?
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+  clients     Client[]
+  orders      Order[]
+  warehouses  Warehouse[]
+  routes      Route[]
+}
+
+model ClientType {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  clients   Client[]
+}
+
+model Territory {
+  id        String   @id @default(cuid())
+  name      String
+  region    String?
+  createdAt DateTime @default(now())
+
+  clients   Client[]
+  routes    Route[]
+}
+
+model Client {
+  id            String   @id @default(cuid())
+  name          String
+  contactPerson String?
+  phone         String?
+  email         String?
+  address       String?
+  region        String?
+  branchId      String?
+  branch        Branch?  @relation(fields: [branchId], references: [id])
+  clientTypeId  String?
+  clientType    ClientType? @relation(fields: [clientTypeId], references: [id])
+  territoryId   String?
+  territory     Territory?  @relation(fields: [territoryId], references: [id])
+  category      String?  // A, B, C
+  status        String   @default("ACTIVE") // ACTIVE, INACTIVE, BLOCKED
+  debtLimit     Float    @default(0)
+  comment       String?
+  lat           Float?
+  lng           Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  orders        Order[]
+  visits        Visit[]
+  debts         Debt[]
+  payments      Payment[]
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  products  Product[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  sku         String   @unique
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+  brand       String?
+  price       Float    @default(0)
+  unit        String   @default("шт")
+  status      String   @default("ACTIVE")
+  minStock    Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orderItems  OrderItem[]
+  inventory   Inventory[]
+}
+
+model Warehouse {
+  id        String   @id @default(cuid())
+  name      String
+  branchId  String?
+  branch    Branch?  @relation(fields: [branchId], references: [id])
+  address   String?
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+
+  inventory   Inventory[]
+  orders      Order[]
+}
+
+model Inventory {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  quantity    Float    @default(0)
+  reservedQty Float    @default(0)
+  updatedAt   DateTime @updatedAt
+}
+
+model Order {
+  id            String   @id @default(cuid())
+  orderNumber   String   @unique
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id])
+  branchId      String?
+  branch        Branch?  @relation(fields: [branchId], references: [id])
+  warehouseId   String?
+  warehouse     Warehouse? @relation(fields: [warehouseId], references: [id])
+  agentId       String?
+  agent         User?    @relation(fields: [agentId], references: [id])
+  status        String   @default("NEW") // NEW, CONFIRMED, SHIPPED, IN_TRANSIT, DELIVERED, CANCELLED, RETURNED
+  paymentType   String   @default("CASH") // CASH, TRANSFER, CREDIT
+  paymentStatus String   @default("UNPAID") // UNPAID, PARTIAL, PAID
+  deliveryStatus String  @default("PENDING")
+  totalAmount   Float    @default(0)
+  discount      Float    @default(0)
+  tax           Float    @default(0)
+  note          String?
+  deliveryDate  DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  items         OrderItem[]
+  payments      Payment[]
+  debt          Debt?
+  returns       Return[]
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Float
+  price     Float
+  discount  Float    @default(0)
+  total     Float
+
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  orderId     String?
+  order       Order?   @relation(fields: [orderId], references: [id])
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id])
+  amount      Float
+  currency    String   @default("UZS")
+  method      String   @default("CASH") // CASH, TRANSFER, CARD
+  note        String?
+  paidAt      DateTime @default(now())
+  createdAt   DateTime @default(now())
+}
+
+model Debt {
+  id          String   @id @default(cuid())
+  orderId     String   @unique
+  order       Order    @relation(fields: [orderId], references: [id])
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id])
+  amount      Float
+  amountUsd   Float    @default(0)
+  amountEur   Float    @default(0)
+  dueDate     DateTime?
+  daysOverdue Int      @default(0)
+  status      String   @default("ACTIVE") // ACTIVE, PARTIAL, PAID
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Return {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  reason    String?
+  amount    Float
+  status    String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdAt DateTime @default(now())
+}
+
+model Refusal {
+  id        String   @id @default(cuid())
+  clientId  String
+  agentId   String
+  reason    String
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+model Route {
+  id        String   @id @default(cuid())
+  name      String
+  agentId   String
+  agent     User     @relation(fields: [agentId], references: [id])
+  branchId  String?
+  branch    Branch?  @relation(fields: [branchId], references: [id])
+  territoryId String?
+  territory Territory? @relation(fields: [territoryId], references: [id])
+  dayOfWeek String?  // MON, TUE, WED, THU, FRI, SAT
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+
+  visits    Visit[]
+}
+
+model Visit {
+  id          String   @id @default(cuid())
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id])
+  agentId     String
+  agent       User     @relation(fields: [agentId], references: [id])
+  routeId     String?
+  route       Route?   @relation(fields: [routeId], references: [id])
+  checkIn     DateTime?
+  checkOut    DateTime?
+  duration    Int?     // minutes
+  status      String   @default("PLANNED") // PLANNED, VISITED, MISSED, OUTSIDE_ROUTE
+  result      String?
+  hasOrder    Boolean  @default(false)
+  lat         Float?
+  lng         Float?
+  note        String?
+  visitDate   DateTime @default(now())
+  createdAt   DateTime @default(now())
+}
+
+model KPIRecord {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  month       Int
+  year        Int
+  planVisits  Int      @default(0)
+  actualVisits Int     @default(0)
+  planSales   Float    @default(0)
+  actualSales Float    @default(0)
+  planOrders  Int      @default(0)
+  actualOrders Int     @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  type      String   @default("INFO") // INFO, WARNING, ERROR, SUCCESS
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  url       String
+  icon      String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  entity    String?
+  entityId  String?
+  meta      String?
+  createdAt DateTime @default(now())
+}
