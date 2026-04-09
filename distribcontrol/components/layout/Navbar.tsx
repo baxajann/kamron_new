@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
@@ -66,6 +66,15 @@ const ROLE_LABELS: Record<string, string> = {
   WAREHOUSE: "Сотрудник склада", FINANCE: "Финансовый менеджер",
 }
 
+interface ApiNotification {
+  id: string
+  title: string
+  message: string
+  type: "INFO" | "WARNING" | "ERROR" | "SUCCESS"
+  isRead: boolean
+  createdAt: string
+}
+
 export default function Navbar({ user }: NavbarProps) {
   const pathname = usePathname()
   const [openMenu, setOpenMenu] = useState<string | null>(null)
@@ -75,6 +84,24 @@ export default function Navbar({ user }: NavbarProps) {
   const { selectedBranch, setSelectedBranch } = useBranch()
   const menuRef = useRef<HTMLDivElement>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const [apiNotifications, setApiNotifications] = useState<ApiNotification[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res = await fetch("/api/notifications?filter=all")
+      if (!res.ok) return
+      const data = await res.json()
+      setApiNotifications(data.notifications || [])
+      setUnreadCount(data.unreadCount || 0)
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    fetchNotifications()
+    const interval = setInterval(fetchNotifications, 30000)
+    return () => clearInterval(interval)
+  }, [fetchNotifications])
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -88,6 +115,18 @@ export default function Navbar({ user }: NavbarProps) {
     document.addEventListener("mousedown", handleClick)
     return () => document.removeEventListener("mousedown", handleClick)
   }, [])
+
+  const markAsRead = async (id: string) => {
+    try {
+      await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      })
+      setApiNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n))
+      setUnreadCount(prev => Math.max(0, prev - 1))
+    } catch {}
+  }
 
   const handleMenuEnter = (key: string) => {
     clearTimeout(closeTimer.current)
@@ -220,27 +259,93 @@ export default function Navbar({ user }: NavbarProps) {
                 onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
               >
                 <Bell size={16} />
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full" style={{ background: "#ef4444" }} />
+                {unreadCount > 0 && (
+                  <span
+                    className="absolute -top-0.5 -right-0.5 flex items-center justify-center rounded-full text-white font-bold"
+                    style={{
+                      background: "#ef4444",
+                      fontSize: "9px",
+                      minWidth: unreadCount > 9 ? "16px" : "14px",
+                      height: "14px",
+                      padding: "0 3px",
+                    }}
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
               </button>
               {showNotifications && (
                 <div className="absolute right-0 top-[calc(100%+8px)] bg-white rounded-xl shadow-xl border w-80 animate-fade-in" style={{ zIndex: 200 }}>
                   <div className="flex items-center justify-between px-4 py-3 border-b">
                     <span className="font-semibold text-sm">Уведомления</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "#fef2f2", color: "#dc2626" }}>5 новых</span>
+                    {unreadCount > 0 && (
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "#fef2f2", color: "#dc2626" }}>
+                        {unreadCount} новых
+                      </span>
+                    )}
                   </div>
-                  {[
-                    { title: "Новый заказ", msg: "ООО «Ташкент Маркет» оформил заказ", time: "2 мин" },
-                    { title: "Просрочен долг", msg: "ИП Рашидов А. — долг более 120 дней", time: "1 ч" },
-                    { title: "Низкий остаток", msg: "Coca-Cola 0.5л — заканчивается на складе", time: "3 ч" },
-                  ].map((n, i) => (
-                    <div key={i} className="px-4 py-3 border-b last:border-0 hover:bg-gray-50 cursor-pointer">
-                      <div className="font-medium text-sm mb-0.5">{n.title}</div>
-                      <div className="text-xs" style={{ color: "#6b7280" }}>{n.msg}</div>
-                      <div className="text-xs mt-1" style={{ color: "#9ca3af" }}>{n.time} назад</div>
+                  {apiNotifications.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8" style={{ color: "#9ca3af" }}>
+                      <Bell size={24} className="mb-2 opacity-30" />
+                      <span className="text-xs">Нет уведомлений</span>
                     </div>
-                  ))}
-                  <div className="px-4 py-2 text-center">
-                    <Link href="/settings/notifications" className="text-xs font-medium" style={{ color: "#22c55e" }} onClick={() => setShowNotifications(false)}>Все уведомления</Link>
+                  ) : (
+                    apiNotifications.slice(0, 5).map(n => {
+                      const typeColors: Record<string, string> = {
+                        INFO: "#3b82f6", WARNING: "#f59e0b", ERROR: "#ef4444", SUCCESS: "#22c55e"
+                      }
+                      return (
+                        <div
+                          key={n.id}
+                          className="px-4 py-3 border-b last:border-0 cursor-pointer transition-colors"
+                          style={{ background: n.isRead ? "white" : "#f0fdf4", borderLeft: n.isRead ? "3px solid transparent" : "3px solid #22c55e" }}
+                          onClick={() => { if (!n.isRead) markAsRead(n.id) }}
+                          onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
+                          onMouseLeave={e => (e.currentTarget.style.background = n.isRead ? "white" : "#f0fdf4")}
+                        >
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            {!n.isRead && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#22c55e" }} />}
+                            <div className="font-medium text-sm" style={{ color: typeColors[n.type] || "#374151" }}>{n.title}</div>
+                          </div>
+                          <div className="text-xs" style={{ color: "#6b7280" }}>{n.message}</div>
+                          <div className="text-xs mt-1" style={{ color: "#9ca3af" }}>
+                            {(() => {
+                              const diff = Math.floor((Date.now() - new Date(n.createdAt).getTime()) / 1000)
+                              if (diff < 60) return "только что"
+                              if (diff < 3600) return `${Math.floor(diff / 60)} мин назад`
+                              if (diff < 86400) return `${Math.floor(diff / 3600)} ч назад`
+                              return `${Math.floor(diff / 86400)} дн назад`
+                            })()}
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
+                  <div className="px-4 py-2.5 flex items-center justify-between border-t">
+                    <Link
+                      href="/settings/notifications"
+                      className="text-xs font-medium"
+                      style={{ color: "#22c55e" }}
+                      onClick={() => setShowNotifications(false)}
+                    >
+                      Все уведомления →
+                    </Link>
+                    {unreadCount > 0 && (
+                      <button
+                        className="text-xs font-medium"
+                        style={{ color: "#9ca3af" }}
+                        onClick={async () => {
+                          await fetch("/api/notifications", {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ markAllRead: true }),
+                          })
+                          fetchNotifications()
+                        }}
+                      >
+                        Прочитать все
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

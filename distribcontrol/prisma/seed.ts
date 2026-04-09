@@ -85,9 +85,9 @@ async function main() {
     prisma.user.create({ data: { name: 'Александр Петров', email: 'admin@distribcontrol.uz', password: hashedPassword, role: 'ADMIN', branchId: tashkent.id, phone: '+998901234567' } }),
     prisma.user.create({ data: { name: 'Рустам Каримов', email: 'manager@distribcontrol.uz', password: managerPassword, role: 'MANAGER', branchId: tashkent.id, phone: '+998901234568' } }),
     prisma.user.create({ data: { name: 'Алишер Назаров', email: 'agent1@distribcontrol.uz', password: agentPassword, role: 'AGENT', branchId: tashkent.id, phone: '+998901234569' } }),
-    prisma.user.create({ data: { name: 'Дилшод Юсупов', email: 'agent2@distribcontrol.uz', password: agentPassword, role: 'AGENT', branchId: tashkent.id, phone: '+998901234570' } }),
-    prisma.user.create({ data: { name: 'Санжар Рахимов', email: 'agent3@distribcontrol.uz', password: agentPassword, role: 'AGENT', branchId: bekabad.id, phone: '+998901234571' } }),
-    prisma.user.create({ data: { name: 'Мадина Хасанова', email: 'agent4@distribcontrol.uz', password: agentPassword, role: 'AGENT', branchId: yangiYul.id, phone: '+998901234572' } }),
+    prisma.user.create({ data: { name: 'Дилшод Юсупов', email: 'agent2@distribcontrol.uz', password: agentPassword, role: 'AGENT', branchId: bekabad.id, phone: '+998901234570' } }),
+    prisma.user.create({ data: { name: 'Санжар Рахимов', email: 'agent3@distribcontrol.uz', password: agentPassword, role: 'AGENT', branchId: yangiYul.id, phone: '+998901234571' } }),
+    prisma.user.create({ data: { name: 'Мадина Хасанова', email: 'agent4@distribcontrol.uz', password: agentPassword, role: 'AGENT', branchId: zavod.id, phone: '+998901234572' } }),
     prisma.user.create({ data: { name: 'Бобур Мирзаев', email: 'agent5@distribcontrol.uz', password: agentPassword, role: 'AGENT', branchId: khorezm.id, phone: '+998901234573' } }),
     prisma.user.create({ data: { name: 'Феруза Ахмедова', email: 'finance@distribcontrol.uz', password: managerPassword, role: 'FINANCE', branchId: tashkent.id, phone: '+998901234574' } }),
     prisma.user.create({ data: { name: 'Шохрух Турсунов', email: 'warehouse@distribcontrol.uz', password: managerPassword, role: 'WAREHOUSE', branchId: tashkent.id, phone: '+998901234575' } }),
@@ -201,15 +201,23 @@ async function main() {
   const paymentStatuses = ['UNPAID', 'PARTIAL', 'PAID']
 
   const now = new Date()
-  const orderCount = 110
+  const orderCount = 300
 
   for (let i = 0; i < orderCount; i++) {
     const client = clients[i % clients.length]
     const agent = agents[i % agents.length]
     const status = statuses[i % statuses.length]
     const pStatus = paymentStatuses[i % 3]
-    const daysAgo = Math.floor(Math.random() * 60)
+    
+    // Heavily favor today (0) and yesterday (1)
+    let daysAgo = Math.floor(Math.random() * 60)
+    if (i % 3 === 0) daysAgo = 0 // 1/3 of orders today
+    else if (i % 3 === 1) daysAgo = 1 // 1/3 of orders yesterday
+    
     const orderDate = new Date(now.getTime() - daysAgo * 86400000)
+    // Add random hours to orderDate for nice charts
+    orderDate.setHours(8 + Math.floor(Math.random() * 10), Math.floor(Math.random() * 60))
+    
     const selectedProducts = products.slice(i % 5, (i % 5) + 3)
     const totalAmount = selectedProducts.reduce((sum, p) => sum + p.price * (Math.floor(Math.random() * 10) + 1), 0)
     const orderNumber = `ORD-${String(10000 + i).padStart(5, '0')}`
@@ -288,10 +296,13 @@ async function main() {
 
   // VISITS
   const visitStatuses = ['VISITED', 'VISITED', 'VISITED', 'MISSED', 'OUTSIDE_ROUTE']
-  for (let i = 0; i < 80; i++) {
-    const daysAgo = Math.floor(Math.random() * 30)
+  for (let i = 0; i < 200; i++) {
+    let daysAgo = Math.floor(Math.random() * 30)
+    if (i % 3 === 0) daysAgo = 0
+    else if (i % 3 === 1) daysAgo = 1
+    
     const visitDate = new Date(now.getTime() - daysAgo * 86400000)
-    const checkIn = new Date(visitDate.setHours(8 + Math.floor(Math.random() * 4), 0))
+    const checkIn = new Date(visitDate.setHours(8 + Math.floor(Math.random() * 10), Math.floor(Math.random() * 60)))
     const duration = Math.floor(Math.random() * 60) + 10
     await prisma.visit.create({
       data: {
