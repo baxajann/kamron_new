@@ -189,6 +189,8 @@ model OrderItem {
 
 model Payment {
   id          String   @id @default(cuid())
+  type        String   @default("INCOME") // INCOME, EXPENSE
+  category    String?  
   orderId     String?
   order       Order?   @relation(fields: [orderId], references: [id])
   clientId    String?
