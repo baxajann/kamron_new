@@ -24,7 +24,7 @@ interface NavbarProps {
 const MEGA_MENUS = {
   sales: {
     label: "Продажи",
-    href: "/sales",
+    href: "/sales/orders",
     icon: ShoppingCart,
     groups: [
       { title: "Заказы", items: [{ label: "Заказы", href: "/sales/orders" }, { label: "Возвраты", href: "/sales/returns" }] },
@@ -156,7 +156,7 @@ export default function Navbar({ user }: NavbarProps) {
           <div className="flex items-center gap-0.5 flex-1">
             {Object.entries(MEGA_MENUS).map(([key, menu]) => {
               const Icon = menu.icon
-              const isActive = pathname.startsWith(menu.href) && menu.href !== "/"
+              const isActive = pathname.startsWith(key === "sales" ? "/sales" : menu.href) && menu.href !== "/"
               const isOpen = openMenu === key
 
               return (
@@ -219,7 +219,7 @@ export default function Navbar({ user }: NavbarProps) {
 
           {/* Right side */}
           <div className="flex items-center gap-1.5">
-            {/* Branch switcher */}
+            {/* Departments switcher */}
             <div className="relative">
               <button
                 onClick={() => { setShowBranch(!showBranch); setShowProfile(false); setShowNotifications(false) }}
@@ -227,24 +227,46 @@ export default function Navbar({ user }: NavbarProps) {
                 style={{ background: "rgba(255,255,255,0.08)", color: "white", border: "1px solid rgba(255,255,255,0.12)" }}
               >
                 <Building2 size={13} />
-                {selectedBranch}
+                Отделы
                 <ChevronDown size={11} style={{ opacity: 0.7 }} />
               </button>
               {showBranch && (
-                <div className="absolute right-0 top-[calc(100%+8px)] bg-white rounded-xl shadow-xl border py-2 w-44 animate-fade-in" style={{ zIndex: 200 }}>
-                  <p className="px-4 py-1 text-xs font-semibold uppercase tracking-wide" style={{ color: "#9ca3af" }}>Филиал</p>
-                  {BRANCHES.map(b => (
-                    <button
-                      key={b}
-                      onClick={() => { setSelectedBranch(b); setShowBranch(false) }}
-                      className="w-full text-left px-4 py-2 text-sm transition-colors"
-                      style={{ color: b === selectedBranch ? "#22c55e" : "#374151", fontWeight: b === selectedBranch ? 600 : 400 }}
-                      onMouseEnter={e => (e.currentTarget.style.background = "#f0faf4")}
-                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                    >
-                      {b}
-                    </button>
-                  ))}
+                <div className="absolute right-0 top-[calc(100%+8px)] bg-white rounded-xl shadow-xl border py-2 w-52 animate-fade-in" style={{ zIndex: 200 }}>
+                  <p className="px-4 py-1 text-xs font-semibold uppercase tracking-wide" style={{ color: "#9ca3af" }}>Разделы</p>
+                  
+                  <Link
+                    href="/sales/orders"
+                    onClick={() => setShowBranch(false)}
+                    className="flex flex-col w-full text-left px-4 py-2 text-sm transition-colors mt-1"
+                    style={{ color: "#374151" }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "#f0faf4")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <span className="font-semibold text-gray-800">🏢 Филиал</span>
+                    <span className="text-[10px] text-gray-500">Заказы и продажи</span>
+                  </Link>
+                  <Link
+                    href="/warehouse"
+                    onClick={() => setShowBranch(false)}
+                    className="flex flex-col w-full text-left px-4 py-2 text-sm transition-colors"
+                    style={{ color: "#374151" }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "#f0faf4")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <span className="font-semibold text-gray-800">📦 Склад</span>
+                    <span className="text-[10px] text-gray-500">Остатки товаров</span>
+                  </Link>
+                  <Link
+                    href="/finance/payments"
+                    onClick={() => setShowBranch(false)}
+                    className="flex flex-col w-full text-left px-4 py-2 text-sm transition-colors"
+                    style={{ color: "#374151" }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "#f0faf4")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <span className="font-semibold text-gray-800">💰 Касса</span>
+                    <span className="text-[10px] text-gray-500">Кирим-чиқим / Оплаты</span>
+                  </Link>
                 </div>
               )}
             </div>
