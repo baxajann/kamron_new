@@ -49,3 +49,31 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Server error" }, { status: 500 })
   }
 }
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json()
+    const { productId, quantity } = body
+    if (!productId || !quantity || Number(quantity) <= 0) {
+      return NextResponse.json({ error: "Invalid input data" }, { status: 400 })
+    }
+    
+    // Find a warehouse to put the inventory in
+    let wh = await prisma.warehouse.findFirst()
+    if (!wh) {
+       wh = await prisma.warehouse.create({ data: { name: "Основной Склад" } })
+    }
+    
+    const inv = await prisma.inventory.findFirst({ where: { productId, warehouseId: wh.id } })
+    if (inv) {
+       await prisma.inventory.update({ where: { id: inv.id }, data: { quantity: inv.quantity + Number(quantity) } })
+    } else {
+       await prisma.inventory.create({ data: { productId, warehouseId: wh.id, quantity: Number(quantity) } })
+    }
+    
+    return NextResponse.json({ success: true })
+  } catch (e) {
+    console.error("POST inventory error:", e)
+    return NextResponse.json({ error: "Server error" }, { status: 500 })
+  }
+}

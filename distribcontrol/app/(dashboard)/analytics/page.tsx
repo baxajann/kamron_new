@@ -35,7 +35,7 @@ interface DashboardData {
   agents: { id: string; name: string; orders: number; sales: number; visits: number; visited: number; missed: number; kpi: number }[]
 }
 
-const PERIOD_BUTTONS = ["Сегодня", "Вчера", "7 дней", "Месяц", "Свой период"]
+const PERIOD_BUTTONS = ["Сегодня", "Вчера", "7 дней", "Месяц"]
 const STATUS_SUMMARY = ["Активные", "Визиты по маршруту", "Не посещено", "Вне маршрута", "Проблемные"]
 
 function CircularProgress({ value, size = 120, color = "#33c26b", label, sub }: {
@@ -338,24 +338,8 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Summary strip */}
+      {/* Agent performance table */}
       <div className="card mb-4">
-        <div className="flex border-b" style={{ borderColor: "#f1f5f9" }}>
-          {[
-            { label: "Активные", value: d.visits.visited, color: "#33c26b" },
-            { label: "Визиты по маршруту", value: d.visits.total, color: "#4f6ef7" },
-            { label: "Не посещено", value: d.visits.missed, color: "#ff5b5b" },
-            { label: "Вне маршрута", value: Math.round(d.visits.total * 0.08), color: "#f5a623" },
-            { label: "Проблемные", value: Math.round(d.visits.total * 0.04), color: "#8b5cf6" },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="flex-1 px-4 py-3 text-center" style={{ borderRight: "1px solid #f1f5f9" }}>
-              <div className="font-bold text-lg" style={{ color }}>{value}</div>
-              <div className="text-xs" style={{ color: "#9ca3af" }}>{label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Agent performance table */}
         <div className="overflow-x-auto">
           <table className="data-table">
             <thead>

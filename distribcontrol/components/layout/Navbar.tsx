@@ -183,24 +183,21 @@ export default function Navbar({ user }: NavbarProps) {
                   {isOpen && (
                     <div
                       className="mega-menu absolute top-[calc(100%+8px)] left-0 p-5 min-w-max"
-                      style={{ zIndex: 200 }}
+                      style={{ zIndex: 999 }}
                       onMouseEnter={() => clearTimeout(closeTimer.current)}
                       onMouseLeave={handleMenuLeave}
                     >
-                      <div className="flex gap-7">
+                      <div className="flex gap-10">
                         {menu.groups.map(group => (
-                          <div key={group.title} style={{ minWidth: "160px" }}>
-                            <p className="text-[11px] font-semibold mb-2.5" style={{ color: "#9ca3af" }}>{group.title}</p>
-                            <ul className="space-y-0.5">
+                          <div key={group.title} className="w-40 flex flex-col">
+                            <p className="text-[11px] font-semibold mb-3 text-gray-400 tracking-wider uppercase">{group.title}</p>
+                            <ul className="flex flex-col gap-1 w-full relative z-10">
                               {group.items.map(item => (
-                                <li key={item.href}>
+                                <li key={item.href} className="w-full">
                                   <Link
                                     href={item.href}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors"
-                                    style={{ color: "#374151" }}
+                                    className="block w-full px-3 py-2 rounded-lg text-sm text-gray-700 transition-colors hover:text-green-700 hover:bg-green-50"
                                     onClick={() => setOpenMenu(null)}
-                                    onMouseEnter={e => (e.currentTarget.style.background = "#e8f5e9")}
-                                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                                   >
                                     {item.label}
                                   </Link>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Search, Plus, FileDown, MoreHorizontal, Users, Shield, Loader2, X, Building2 } from "lucide-react"
+import { Search, Plus, FileDown, MoreHorizontal, Users, Shield, Loader2, X, Building2, RefreshCw } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 import { useBranch } from "@/lib/branch-context"
 import * as XLSX from "xlsx"
@@ -31,6 +31,8 @@ export default function PersonnelPage() {
   const [search, setSearch] = useState("")
   const [roleFilter, setRoleFilter] = useState("")
   const [showAddModal, setShowAddModal] = useState(false)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
 
   const fetchUsers = useCallback(async () => {
     setLoading(true)
@@ -51,6 +53,32 @@ export default function PersonnelPage() {
     const t = setTimeout(fetchUsers, 300)
     return () => clearTimeout(t)
   }, [fetchUsers])
+
+  const handleStatusChange = async (userId: string, newStatus: string) => {
+    setUpdatingId(userId)
+    setOpenMenuId(null)
+    try {
+      const res = await fetch(`/api/personnel/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      if (res.ok) {
+        setData((prev: any) => ({
+          ...prev,
+          users: prev.users.map((u: any) => 
+            u.id === userId ? { ...u, status: newStatus } : u
+          )
+        }))
+      }
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  const toggleMenu = (id: string) => {
+    setOpenMenuId(openMenuId === id ? null : id)
+  }
 
   const handleDownloadReport = () => {
     if (!data?.users?.length) return
@@ -158,7 +186,7 @@ export default function PersonnelPage() {
                 </tr>
               </thead>
               <tbody>
-                {data?.users?.map((u: any) => {
+                {data?.users?.map((u: any, idx: number) => {
                   const kpi = u.kpiRecords?.[0]
                   const kpiPercent = kpi ? Math.round((kpi.actualSales / kpi.planSales) * 100) : 0
 
@@ -206,10 +234,34 @@ export default function PersonnelPage() {
                           <span className="text-xs text-gray-400">Нет плана</span>
                         )}
                       </td>
-                      <td className="text-right">
-                        <button className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors">
-                          <MoreHorizontal size={18} />
+                      <td className="text-right relative">
+                        <button 
+                          onClick={() => toggleMenu(u.id)}
+                          disabled={updatingId === u.id}
+                          className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
+                        >
+                          {updatingId === u.id ? <Loader2 size={18} className="animate-spin" /> : <MoreHorizontal size={18} />}
                         </button>
+
+                        {openMenuId === u.id && (
+                          <div 
+                            className="absolute right-0 w-48 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden"
+                            style={idx >= Math.max(0, data.users.length - 2) && data.users.length >= 3 
+                              ? { bottom: "calc(100% + 4px)" } 
+                              : { top: "calc(100% + 4px)" }
+                            }
+                          >
+                            <div className="p-1.5 focus:outline-none">
+                              <button
+                                onClick={() => handleStatusChange(u.id, u.status === "ACTIVE" ? "INACTIVE" : "ACTIVE")}
+                                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors font-medium"
+                              >
+                                <RefreshCw size={15} className="text-blue-500" />
+                                Сделать {u.status === "ACTIVE" ? "Неактивным" : "Активным"}
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   )

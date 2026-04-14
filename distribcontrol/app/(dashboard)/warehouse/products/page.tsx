@@ -37,7 +37,7 @@ export default function ProductsPage() {
           { label: "Всего товаров", value: data?.summary?.totalProducts || 0, color: "#1a3a2e" },
           { label: "Категорий", value: data?.summary?.categoriesCount || 0, color: "#6366f1" },
           { label: "Мало на складе", value: data?.summary?.lowStockCount || 0, color: "#ef4444" },
-          { label: "Стоимость склада", value: formatCurrency(data?.summary?.totalStockValue || 0), color: "#22c55e" },
+          { label: "Сумма товаров", value: formatCurrency(data?.summary?.totalStockValue || 0), color: "#22c55e" },
         ].map(c => (
           <div key={c.label} className="kpi-card">
             <div className="text-sm mb-1" style={{ color: "#6b7280" }}>{c.label}</div>
